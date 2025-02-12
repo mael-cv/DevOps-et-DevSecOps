@@ -1,16 +1,35 @@
 version: 2.1
+
 orbs:
   node: circleci/node@5
+
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:18.16
+
 jobs:
-  # First job declared is for building things..
-  build:
-    executor: node/default
+  install_deps:
+    executor: node-executor
     steps:
       - checkout
-      - run: echo "Building things..."
-  # Second job declared is for launching unit tests with Jest
+      - node/install-packages:
+          pkg-manager: npm
+
+  build:
+    executor: node-executor
+    steps:
+      - checkout
+      - run: echo "Building project..."
+      - run:
+          name: Run linter
+          command: npm run lint
+      - run:
+          name: Clean & Package
+          command: npm run build
+
   unit-tests:
-    executor: node/default
+    executor: node-executor
     environment:
       JEST_JUNIT_OUTPUT_DIR: ./test-results/
     steps:
@@ -18,47 +37,100 @@ jobs:
       - node/install-packages:
           pkg-manager: npm
       - run:
-          command: npm install jest-junit
-      - run:
-          name: Run tests
-          command: npm run test:ci
+          name: Run Jest tests
+          command: npm test --ci
       - store_test_results:
           path: ./test-results/
+
+  integration-tests:
+    executor: node-executor
+    steps:
+      - checkout
+      - run: echo "Running integration tests..."
+      - run: npm run test:integration
+
+  regression-tests:
+    executor: node-executor
+    steps:
+      - checkout
+      - run: echo "Running regression tests..."
+      - run: npm run test:regression
+
+  security-tests:
+    executor: node-executor
+    steps:
+      - checkout
+      - run: echo "Running security tests..."
+      - run: npm run test:security
+
   deploy_dev:
-    executor: node/default
+    executor: node-executor
     steps:
       - checkout
       - run: echo "Deploying to development environment..."
 
+  deploy_integration:
+    executor: node-executor
+    steps:
+      - checkout
+      - run: echo "Deploying to integration environment..."
+
   deploy_prod:
-    executor: node/default
+    executor: node-executor
     steps:
       - checkout
       - run: echo "Deploying to production environment..."
+
 workflows:
   version: 2
   build-test-deploy:
-
     jobs:
+      - install_deps
 
-      - build
+      - build:
+          requires:
+            - install_deps
 
       - unit-tests:
+          requires:
+            - build
+
+      - integration-tests:
+          requires:
+            - build
+
+      - regression-tests:
+          requires:
+            - build
+
+      - security-tests:
           requires:
             - build
 
       - deploy_dev:
           requires:
             - unit-tests
+            - integration-tests
+            - regression-tests
           filters:
             branches:
-              only:
-                - develop
+              only: develop
+
+      - deploy_integration:
+          requires:
+            - unit-tests
+            - integration-tests
+            - regression-tests
+          filters:
+            branches:
+              only: integration
 
       - deploy_prod:
           requires:
             - unit-tests
+            - integration-tests
+            - regression-tests
+            - security-tests
           filters:
             branches:
-              only:
-                - main
+              only: main
