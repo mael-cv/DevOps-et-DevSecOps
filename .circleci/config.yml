@@ -3,10 +3,10 @@ version: 2.1
 orbs:
   node: circleci/node@5
 
-executors:
-  node-executor:
-    docker:
-      - image: cimg/node:18.16
+#executors:
+#  node-executor:
+#    docker:
+#      - image: cimg/node:18.16
 
 jobs:
   install_deps:
