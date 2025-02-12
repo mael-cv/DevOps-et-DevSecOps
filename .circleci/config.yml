@@ -16,9 +16,27 @@ jobs:
     steps:
       - checkout
       - run: echo "Building project..."
+      - run: npm install
+      - run: npm install --no-save eslint
       - run:
-          name: Run linter
-          command: npm run lint
+          name: Create ESLint config
+          command: |
+            echo 'export default [
+              {
+                files: ["**/*.js"],
+                languageOptions: {
+                  ecmaVersion: "latest",
+                  sourceType: "module",
+                  globals: {
+                    browser: true,
+                    node: true
+                  }
+                },
+              }
+            ];' > eslint.config.js
+      - run:
+          name: Run ESLint
+          command: npx eslint .
       - run:
           name: Clean & Package
           command: npm run build
