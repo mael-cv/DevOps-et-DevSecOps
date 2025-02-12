@@ -3,21 +3,16 @@ version: 2.1
 orbs:
   node: circleci/node@5
 
-#executors:
-#  node-executor:
-#    docker:
-#      - image: cimg/node:18.16
-
 jobs:
   install_deps:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - node/install-packages:
           pkg-manager: npm
 
   build:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - run: echo "Building project..."
@@ -29,7 +24,7 @@ jobs:
           command: npm run build
 
   unit-tests:
-    executor: node-executor
+    executor: node/default
     environment:
       JEST_JUNIT_OUTPUT_DIR: ./test-results/
     steps:
@@ -43,40 +38,40 @@ jobs:
           path: ./test-results/
 
   integration-tests:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - run: echo "Running integration tests..."
       - run: npm run test:integration
 
   regression-tests:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - run: echo "Running regression tests..."
       - run: npm run test:regression
 
   security-tests:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - run: echo "Running security tests..."
       - run: npm run test:security
 
   deploy_dev:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - run: echo "Deploying to development environment..."
 
   deploy_integration:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - run: echo "Deploying to integration environment..."
 
   deploy_prod:
-    executor: node-executor
+    executor: node/default
     steps:
       - checkout
       - run: echo "Deploying to production environment..."
