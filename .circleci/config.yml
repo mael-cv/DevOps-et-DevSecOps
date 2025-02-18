@@ -1,21 +1,23 @@
 version: 2.1
-
 orbs:
   node: circleci/node@5
 
 jobs:
-  install_deps:
+  install-dependencies:
     executor: node/default
     steps:
       - checkout
-      - node/install-packages:
-          pkg-manager: npm
+      - run:
+          name: Build dependencies
+          command: echo "Building things..."
+      - run:
+          name: Install dependencies
+          command: npm install
 
-  build:
+  lint-code:
     executor: node/default
     steps:
       - checkout
-      - run: echo "Building project..."
       - run: npm install
       - run: npm install --no-save eslint
       - run:
@@ -36,116 +38,133 @@ jobs:
             ];' > eslint.config.js
       - run:
           name: Run ESLint
-          command: npx eslint .
-      - run:
-          name: Clean & Package
-          #command: npm run build
-          command: echo "Building things..."
+          command: npx eslint . 
+  package-project:
+    executor: node/default
+    steps:
+      - run: mkdir -p ./dist/build
+      - run: echo "Packaged the file properly"
 
   unit-tests:
     executor: node/default
-    environment:
-      JEST_JUNIT_OUTPUT_DIR: ./test-results/
     steps:
-      - checkout
-      - node/install-packages:
-          pkg-manager: npm
-      - run:
-          name: Run Jest tests
-          #command: npm test --ci
-          command: echo "Running Jest tests..."
-      - store_test_results:
-          path: ./test-results/
+      - run: echo "Marching through unit tests"
 
   integration-tests:
     executor: node/default
     steps:
-      - checkout
-      - run: echo "Running integration tests..."
-      #- run: npm run test:integration
+      - run: echo "Marching through integration tests"
 
   regression-tests:
     executor: node/default
     steps:
-      - checkout
-      - run: echo "Running regression tests..."
-      #- run: npm run test:regression
+      - run: echo "Marching through integration tests"
+
+  performances-tests:
+    executor: node/default
+    steps:
+      - run: echo "Marching through performances tests"
 
   security-tests:
     executor: node/default
     steps:
-      - checkout
-      - run: echo "Running security tests..."
-      #- run: npm run test:security
+      - run: echo "Marching through security tests"
 
-  deploy_dev:
+  compatibility-tests:
     executor: node/default
     steps:
-      - checkout
-      - run: echo "Deploying to development environment..."
+      - run: echo "Marching through compatibility tests"
 
-  deploy_integration:
+  accessibility-tests:
     executor: node/default
     steps:
-      - checkout
-      - run: echo "Deploying to integration environment..."
+      - run: echo "Marching through accessibility tests"
 
-  deploy_prod:
+  prepare-deployment-env:
     executor: node/default
     steps:
-      - checkout
-      - run: echo "Deploying to production environment..."
+      - run: echo "Preparing deployment environment"
+
+  deploy:
+    executor: node/default
+    steps:
+      - run: echo "Deploying"
+
+
+  check-tests:
+    executor: node/default
+    steps:
+      - run: echo "Checking stuff"
+
+  working-tests:
+    executor: node/default
+    steps:
+      - run: echo "Testing if the app is properly working"
+
+  stress-tests:
+    executor: node/default
+    steps:
+      - run: echo "Testing the app under heavy load"
+
+  final-check:
+    executor: node/default
+    steps:
+      - run: echo "Running final test on the app"
 
 workflows:
   version: 2
-  build-test-deploy:
+  build-test:
     jobs:
-      - install_deps
-
-      - build:
+      - install-dependencies
+      - lint-code:
           requires:
-            - install_deps
-
-      - unit-tests:
+            - install-dependencies
+      - package-project:
           requires:
-            - build
+            - lint-code
 
-      - integration-tests:
-          requires:
-            - build
 
-      - regression-tests:
+      - unit-tests: &requires_package
           requires:
-            - build
-
-      - security-tests:
-          requires:
-            - build
-
-      - deploy_dev:
-          requires:
-            - unit-tests
-            - integration-tests
-            - regression-tests
+            - package-project
           filters:
             branches:
               only: develop
+      - integration-tests:
+          <<: *requires_package
+      - regression-tests:
+          <<: *requires_package
+      - performances-tests:
+          <<: *requires_package
+      - security-tests:
+          <<: *requires_package
+      - compatibility-tests:
+          <<: *requires_package
+      - accessibility-tests:
+          <<: *requires_package
 
-      - deploy_integration:
+
+      - prepare-deployment-env:
           requires:
-            - unit-tests
-            - integration-tests
-            - regression-tests
+            - package-project
           filters:
             branches:
-              only: integration
-
-      - deploy_prod:
+              only:
+                - main
+                - hotfix
+      - deploy:
           requires:
-            - unit-tests
-            - integration-tests
-            - regression-tests
-            - security-tests
-          filters:
-            branches:
-              only: main
+            - prepare-deployment-env
+      - check-tests:
+          requires:
+            - deploy
+      - working-tests:
+          requires:
+            - deploy
+      - stress-tests:
+          requires:
+            - check-tests
+            - working-tests
+      - final-check:
+          requires:
+            - stress-tests
